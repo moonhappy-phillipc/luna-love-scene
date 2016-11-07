@@ -1,0 +1,30 @@
+# .travis.yml - based originally from http://lua.space/general/ci-with-lua
+
+language: python
+sudo: false
+
+env:
+  - LUA="lua=5.1"
+  - LUA="lua=5.2"
+  - LUA="lua=5.3"
+  - LUA="luajit=2.0"
+  - LUA="luajit=2.1"
+
+before_install:
+  - pip install hererocks
+  - hererocks lua_install -r^ --$LUA
+  - export PATH=$PATH:$PWD/lua_install/bin
+
+install:
+  - luarocks install luacheck          # Static code analysis
+  - luarocks install busted            # Unit testing
+  - luarocks install luacov            # Unit test code coverage
+  - luarocks install luacov-coveralls  # Code coverage collector for Coveralls
+  - luarocks install ldoc              # Inline documentation
+
+script:
+  - luacheck --std max+busted *.lua spec
+  - busted --verbose --coverage
+
+after_success:
+  - luacov-coveralls -e $TRAVIS_BUILD_DIR/lua_install

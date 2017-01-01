@@ -66,6 +66,7 @@ function LnaStage:initialize()
   self.scenes = {}
   self.scenesCount = 0
   self.sceneCurrent = -1
+  self.stageLoad = false
 end
 
 function LnaStage:addScene(scene)
@@ -76,12 +77,16 @@ end
 
 function LnaStage:setCurrentScene(sceneIdx)
   self.sceneCurrent = sceneIdx
+  if self.stageLoad then
+    self.scenes[self.sceneCurrent]:load()
+  end
 end
 
 function LnaStage:load()
-  for i,v in ipairs(self.scenes) do
-    v:load()
+  if self.scenes[self.sceneCurrent] then
+    self.scenes[self.sceneCurrent]:load()
   end
+  self.stageLoad = true
 end
 
 function LnaStage:update(dt)

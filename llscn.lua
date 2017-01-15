@@ -13,12 +13,10 @@ function LnaActor:initialize()
   self.visible = true
   self.active = true
   self.cues = {}
-  self.cuesCount = 0
 end
 
 function LnaActor:onCue(cueName, callbackName)
-  self.cues[self.cuesCount] = {cue=cueName, cb=callbackName}
-  self.cuesCount = self.cuesCount + 1
+  self.cues[#self.cues + 1] = {cue=cueName, cb=callbackName}
 end
 
 function LnaActor:_doHandleCue(cueName)
@@ -75,7 +73,6 @@ function LnaScene:initialize()
   self.id = -1
   self.stage = nil
   self.actors = {}
-  self.actorsCount = 0
 end
 
 -- As an actor/director might be allocated to multiple scenes, when a transistion
@@ -88,9 +85,8 @@ function LnaScene:_setAsCurrent()
 end
 
 function LnaScene:addActor(actor)
-  self.actors[self.actorsCount] = actor
-  self.actorsCount = self.actorsCount + 1
-  return self.actorsCount - 1
+  self.actors[#self.actors + 1] = actor
+  return #self.actors
 end
 
 function LnaScene:addDirector(director)
@@ -131,17 +127,15 @@ LnaStage = class('LnaStage')
 function LnaStage:initialize()
   self.id = -1
   self.scenes = {}
-  self.scenesCount = 0
   self.sceneCurrentIdx = -1
   self.stageLoad = false
 end
 
 function LnaStage:addScene(scene)
-  self.scenes[self.scenesCount] = scene
-  scene.id = self.scenesCount
+  self.scenes[#self.scenes + 1] = scene
+  scene.id = #self.scenes
   scene.stage = self
-  self.scenesCount = self.scenesCount + 1
-  return self.scenesCount - 1
+  return #self.scenes
 end
 
 function LnaStage:setCurrentScene(sceneIdx)

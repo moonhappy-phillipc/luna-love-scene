@@ -2,16 +2,16 @@
   Simple demonstration of the Luna-Love-Scene paradigm.
 ]]
 
-local class = require("lib.middleclass.middleclass")
-require "llscn"
+local class = require "lib.middleclass.middleclass"
+local Lna = require "llscn"
 
 --[[
   Example actor.
   Performs "hello world" until signalled on cue to perform "bye world".
 ]]
-local HiWorld = class("HiWorld", LnaActor)
+local HiWorld = class("HiWorld", Lna.Actor)
 function HiWorld:initialize()
-  LnaActor.initialize(self)
+  Lna.Actor.initialize(self)
   self.message = "Hello World"
   self:onCue("hiworld_bye", "sayBye")
 end
@@ -27,9 +27,9 @@ end
   Monitors the time and will signal the cue for Hello World actor to start
   performing the less famous "bye world" routine, after 3 seconds have passed.
 ]]
-local HiWorldDirector = class("HiWorldDirector", LnaDirector)
+local HiWorldDirector = class("HiWorldDirector", Lna.Director)
 function HiWorldDirector:initialize()
-  LnaDirector.initialize(self)
+  Lna.Director.initialize(self)
   self.timePassed = 0
   self.cueFired = false
 end
@@ -42,13 +42,13 @@ function HiWorldDirector:update(dt)
 end
 
 -- Construct the scene
-local scene = LnaScene:new()
+local scene = Lna.Scene:new()
 local actor = HiWorld:new()
 local director = HiWorldDirector:new()
 local actorIdx = scene:addActor(actor)
 local directorIdx = scene:addDirector(director)
 
-local stage = LnaStage:new()
+local stage = Lna.Stage:new()
 local sceneIdx = stage:addScene(scene)
 stage:setCurrentScene(sceneIdx)
 

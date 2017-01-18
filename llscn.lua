@@ -6,7 +6,7 @@ local class = require "lib.middleclass.middleclass"
  actor construct as the foundation to perform the role of an entity in the game.
 ]]
 
-LnaActor = class('LnaActor')
+local LnaActor = class('LnaActor')
 function LnaActor:initialize()
   self.id = -1
   self.scene = nil
@@ -57,7 +57,7 @@ end
  The director is like an actor, but is behind the scenes making sure everything
  goes to "plan".
 ]]
-LnaDirector = class('LnaDirector', LnaActor)
+local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
   self.visible = false
@@ -68,7 +68,7 @@ end
  The scene contains an assortment of actors and props to delight and entertain.
 ]]
 
-LnaScene = class('LnaScene')
+local LnaScene = class('LnaScene')
 function LnaScene:initialize()
   self.id = -1
   self.stage = nil
@@ -123,7 +123,7 @@ end
  The stage is the foundation to which scenes belong.
 ]]
 
-LnaStage = class('LnaStage')
+local LnaStage = class('LnaStage')
 function LnaStage:initialize()
   self.id = -1
   self.scenes = {}
@@ -164,3 +164,5 @@ function LnaStage:draw()
     self.scenes[self.sceneCurrentIdx]:draw()
   end
 end
+
+return { Actor=LnaActor, Director=LnaDirector, Scene=LnaScene, Stage=LnaStage }

@@ -13,22 +13,67 @@ function LnaActor:initialize()
   self.visible = true
   self.active = true
   self.cues = {}
+  self.kbCues = {}
 end
 
-function LnaActor:onCue(cueName, callbackName)
-  self.cues[#self.cues + 1] = {cue=cueName, cb=callbackName}
+function LnaActor:onCue(cueName, callbackName, director)
+  self.cues[#self.cues + 1] = {cue=cueName, cb=callbackName, obj=self, dir=director}
+  if director then
+    director.cues[#director.cues + 1] = {cue=cueName, cb=callbackName, obj=self, dir=director}
+  elseif self.scene then
+    self.scene.cues[#self.scene.cues + 1] = {cue=cueName, cb=callbackName, obj=self, dir=self.scene}
+  end
 end
 
-function LnaActor:_doHandleCue(cueName)
-  for i,v in pairs(self.cues) do
-    if v.cue == cueName then
-      self[v.cb](self)
-    end
+function LnaActor:onKeyboardCue(keyName, callbackName, director)
+  self.kbCues[#self.kbCues + 1] = {key=keyName, cb=callbackName, obj=self, dir=director}
+  if director then
+    director.kbCues[#director.kbCues + 1] = {key=keyName, cb=callbackName, obj=self, dir=director}
+  elseif self.scene then
+    self.scene.kbCues[#self.scene.kbCues + 1] = {key=keyName, cb=callbackName, obj=self, dir=self.scene}
   end
 end
 
 function LnaActor:signalCue(cueName)
-  self.scene:signalCue(cueName)
+  if self.scene then
+    self.scene:signalCue(cueName)
+  end
+end
+
+function LnaActor:_setDirector(director)
+  if director then
+    count = #self.cues
+    for i=1,count do
+      if self.cues[i].dir == director then
+        director.cues[#director.cues+1] = self.cues[i]
+      end
+    end
+    count = #self.kbCues
+    for i=1,count do
+      if self.kbCues[i].dir == director then
+        director.kbCues[#director.kbCues+1] = self.kbCues[i]
+      end
+    end
+  end
+end
+
+function LnaActor:_sceneSet(id, scene)
+  self.id = id
+  self.scene = scene
+  if scene then
+    count = #self.cues
+    for i=1,count do
+      if self.cues[i].dir == scene or not self.cues[i].dir then
+        director.cues[#director.cues+1] = self.cues[i]
+      end
+    end
+    count = #self.kbCues
+    for i=1,count do
+      if self.kbCues[i].dir == director or not self.kbCues[i].dir then
+        director.kbCues[#director.kbCues+1] = self.kbCues[i]
+      end
+    end
+  end
 end
 
 function LnaActor:load()
@@ -61,6 +106,21 @@ local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
   self.visible = false
+  self.actors = {}
+end
+
+function LnaDirector:addActor(actor)
+  if actor then
+    self.actors[#self.actors + 1] = actor
+    actor:_setDirector(self)
+    return #self.actors
+  else
+    return -1
+  end
+end
+
+function LnaDirector:addDirector(director)
+  return self:addActor(director)
 end
 
 --[[--
@@ -73,14 +133,18 @@ function LnaScene:initialize()
   self.id = -1
   self.stage = nil
   self.actors = {}
+  self.cues = {}
+  self.kbCues = {}
 end
 
--- As an actor/director might be allocated to multiple scenes, when a transistion
--- occurs, the id must be adjusted to the newly set scene.
 function LnaScene:_setAsCurrent()
+  -- Clear cues
+  count = #self.cues
+  for i=0, count do self.cues[i]=nil end
+  self.cues = {}
+  -- Configure all actors
   for i,v in pairs(self.actors) do
-    v.id = i
-    v.scene = self
+    v:_sceneSet(i, self)
   end
 end
 
@@ -94,8 +158,18 @@ function LnaScene:addDirector(director)
 end
 
 function LnaScene:signalCue(eventName)
-  for i,v in pairs(self.actors) do
-    v:_doHandleCue(eventName)
+  for i,v in pairs(self.cues) do
+    if v.cue == eventName and (not v.director or v.director.active) then
+      v.obj[v.cb](v.obj)
+    end
+  end
+end
+
+function LnaScene:signalKeyboardCue(key)
+  for i,v in pairs(self.kbCues) do
+    if v.key == key and (not v.director or v.director.active) then
+      v.obj[v.cb](v.obj)
+    end
   end
 end
 

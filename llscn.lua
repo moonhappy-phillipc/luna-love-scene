@@ -10,10 +10,18 @@ local LnaActor = class('LnaActor')
 function LnaActor:initialize()
   self.id = -1
   self.scene = nil
-  self.visible = true
-  self.active = true
+  self._visible = true
+  self._active = true
   self.cues = {}
   self.kbCues = {}
+end
+
+function LnaActor:setActive(active)
+  self._active = active
+end
+
+function LnaActor:setVisible(visible)
+  self._visible = visible
 end
 
 function LnaActor:onCue(cueName, callbackName, director)
@@ -86,13 +94,13 @@ function LnaActor:draw()
 end
 
 function LnaActor:_doupdate(dt)
-  if self.active then
+  if self._active then
     self:update(dt)
   end
 end
 
 function LnaActor:_dodraw()
-  if self.visible then
+  if self._visible then
     self:draw()
   end
 end
@@ -105,7 +113,7 @@ end
 local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
-  self.visible = false
+  self._visible = false
   self.actors = {}
 end
 
@@ -159,7 +167,7 @@ end
 
 function LnaScene:signalCue(eventName)
   for i,v in pairs(self.cues) do
-    if v.cue == eventName and (not v.director or v.director.active) then
+    if v.cue == eventName and (not v.director or v.director._active) then
       v.obj[v.cb](v.obj)
     end
   end
@@ -167,7 +175,7 @@ end
 
 function LnaScene:signalKeyboardCue(key)
   for i,v in pairs(self.kbCues) do
-    if v.key == key and (not v.director or v.director.active) then
+    if v.key == key and (not v.director or v.director._active) then
       v.obj[v.cb](v.obj)
     end
   end

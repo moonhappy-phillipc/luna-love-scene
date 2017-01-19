@@ -44,23 +44,6 @@ function LnaActor:signalCue(cueName)
   end
 end
 
-function LnaActor:_setDirector(director)
-  if director then
-    count = #self.cues
-    for i=1,count do
-      if self.cues[i].dir == director then
-        director.cues[#director.cues+1] = self.cues[i]
-      end
-    end
-    count = #self.kbCues
-    for i=1,count do
-      if self.kbCues[i].dir == director then
-        director.kbCues[#director.kbCues+1] = self.kbCues[i]
-      end
-    end
-  end
-end
-
 function LnaActor:_setScene(id, scene)
   self.id = id
   self.scene = scene
@@ -109,7 +92,7 @@ end
 local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
-  self._visible = false
+  self:setVisible(false)
   self.actors = {}
 end
 
@@ -126,28 +109,44 @@ function LnaDirector:addDirector(director)
   return self:addActor(director)
 end
 
+function LnaDirector:_clearOutActorCues(cues)
+  -- Clear cues of actors
+  local count = #cues
+  local remakeCue = {}
+  for i=1,count do
+    if cues[i].dir ~= self then
+      remakeCues[#remakeCues + 1] = cues[i]
+    end
+    cues[i] = nil
+  end
+  cues = {}
+  cues = remakeCues
+end
+
+function LnaDirector:_addCues(actorCues, toCues)
+  local count = #actorCues
+  for i=1,count do
+    toCues[#toCues+1] = actorCues[i]
+  end
+end
+
 function LnaDirector:_setScene(id, scene)
   self.id = id
   self.scene = scene
   if scene then
-    -- cues from actors
+    -- Clear actor cues, ready for re-add
+    self:_clearOutActorCues(self.cues)
+    self:_clearOutActorCues(self.kbCues)
+    -- Cues from actors
     local count = #self.actors
     for i=1,count do
       local childActor = self.actors[i]
-      local cueCount = #childActor.cues
-      for x=1,cueCount do
-        self.cues[#self.cues+1] = childActor.cues[x]
-      end
+      self:_addCues(childActor.cues, self.cues)
+      self:_addCues(childActor.kbCues, self.kbCues)
     end
-    -- add cues to scene
-    count = #self.cues
-    for i=1,count do
-      scene.cues[#scene.cues+1] = self.cues[i]
-    end
-    count = #self.kbCues
-    for i=1,count do
-      scene.kbCues[#scene.kbCues+1] = self.kbCues[i]
-    end
+    -- Add cues to scene
+    self:_addCues(self.cues, scene.cues)
+    self:_addCues(self.kbCues, scene.kbCues)
   end
 end
 

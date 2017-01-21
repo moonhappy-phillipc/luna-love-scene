@@ -8,12 +8,12 @@ local class = require "lib.middleclass.middleclass"
 
 local LnaActor = class('LnaActor')
 function LnaActor:initialize()
+  self.cues = {}
+  self.kbCues = {}
   self.id = -1
   self.scene = nil
   self._visible = true
   self._active = true
-  self.cues = {}
-  self.kbCues = {}
 end
 
 function LnaActor:setActive(active)
@@ -92,8 +92,8 @@ end
 local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
-  self:setVisible(false)
   self.actors = {}
+  self:setVisible(false)
 end
 
 function LnaDirector:addActor(actor)
@@ -157,11 +157,11 @@ end
 
 local LnaScene = class('LnaScene')
 function LnaScene:initialize()
-  self.id = -1
-  self.stage = nil
   self.actors = {}
   self.cues = {}
   self.kbCues = {}
+  self.id = -1
+  self.stage = nil
 end
 
 function LnaScene:_setAsCurrent()

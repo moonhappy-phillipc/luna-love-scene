@@ -7,10 +7,11 @@ local class = require "lib.middleclass.middleclass"
 ]]
 
 local LnaActor = class('LnaActor')
-function LnaActor:initialize()
+function LnaActor:initialize(drawLayer)
   self.cues = {}
   self.kbCues = {}
   self.id = -1
+  self.drawLayer = drawLayer or 0
   self.scene = nil
   self._visible = true
   self._active = true
@@ -158,6 +159,7 @@ end
 local LnaScene = class('LnaScene')
 function LnaScene:initialize()
   self.actors = {}
+  self._drawLayers = {}
   self.cues = {}
   self.kbCues = {}
   self.id = -1
@@ -167,21 +169,33 @@ end
 function LnaScene:_setAsCurrent()
   -- Clear cues
   count = #self.cues
-  for i=0, count do self.cues[i]=nil end
+  for i=0,count do self.cues[i]=nil end
   self.cues = {}
   -- Configure all actors
-  for i,v in pairs(self.actors) do
-    v:_setScene(i, self)
+  for _,v in pairs(self.actors) do
+    for k,a in pairs(v) do
+      a:_setScene(k, self)
+    end
   end
 end
 
 function LnaScene:addActor(actor)
-  self.actors[#self.actors + 1] = actor
-  return #self.actors
+  if self.actors[actor.drawLayer] == nil then
+    self.actors[actor.drawLayer] = {}
+  end
+  local count = #self.actors[actor.drawLayer]
+  self.actors[actor.drawLayer][count + 1] = actor
+  -- Sort draw layers
+  local keys = {}
+  for k,_ in pairs(self.actors) do
+    keys[#keys+1] = k
+  end
+  table.sort(keys)
+  self._drawLayers = keys
 end
 
 function LnaScene:addDirector(director)
-  return self:addActor(director)
+  self:addActor(director)
 end
 
 function LnaScene:signalCue(eventName)
@@ -198,27 +212,33 @@ end
 
 function LnaScene:signalKeyboardCue(key)
   for i,v in pairs(self.kbCues) do
-    if v.key == key and (not v.dir or v.dir._active) then
+    if v.key == key and (not v.dir or (v.dir._active and v.dir == obj)) then
       v.obj[v.cb](v.obj)
     end
   end
 end
 
 function LnaScene:load()
-  for i,v in pairs(self.actors) do
-    v:load()
+  for _,v in pairs(self.actors) do
+    for _,a in pairs(v) do
+      a:load()
+    end
   end
 end
 
 function LnaScene:update(dt)
   for i,v in pairs(self.actors) do
-    v:_doupdate(dt)
+    for _,a in pairs(v) do
+      a:_doupdate(dt)
+    end
   end
 end
 
 function LnaScene:draw()
-  for i,v in pairs(self.actors) do
-    v:_dodraw()
+  for _,k in ipairs(self._drawLayers) do
+    for _,a in pairs(self.actors[k]) do
+      a:_dodraw(dt)
+    end
   end
 end
 

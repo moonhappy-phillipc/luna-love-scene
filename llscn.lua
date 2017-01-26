@@ -9,7 +9,6 @@ local class = require "lib.middleclass.middleclass"
 local LnaActor = class('LnaActor')
 function LnaActor:initialize(drawLayer)
   self.cues = {}
-  self.kbCues = {}
   self.mCues = {}
   self.mouseOverCues = {}
   self.id = -1
@@ -35,13 +34,6 @@ function LnaActor:onCue(cueName, callbackName, director)
   end
 end
 
-function LnaActor:onKeyboardCue(keyName, callbackName, director)
-  self.kbCues[#self.kbCues + 1] = {key=keyName, cb=callbackName, obj=self, dir=director}
-  if self.scene then
-    self.scene.kbCues[#self.scene.kbCues + 1] = {key=keyName, cb=callbackName, obj=self, dir=self.scene}
-  end
-end
-
 function LnaActor:onMouseCue(region, callbackName)
   self.mCues[#self.mCues + 1] = {r=region, b=button, cb=callbackName, obj=self}
   if self.scene then
@@ -56,9 +48,9 @@ function LnaActor:onMouseOver(region, callbackName)
   end
 end
 
-function LnaActor:signalCue(cueName)
+function LnaActor:signalCue(cueName, userData)
   if self.scene then
-    self.scene:_signalCue(cueName, self)
+    self.scene:_signalCue(cueName, self, userData)
   end
 end
 
@@ -70,12 +62,6 @@ function LnaActor:_setScene(id, scene)
     for i=1,count do
       if not self.cues[i].dir or self.cues[i].dir == scene then
         scene.cues[#scene.cues+1] = self.cues[i]
-      end
-    end
-    count = #self.kbCues
-    for i=1,count do
-      if not self.kbCues[i].dir or self.kbCues[i].dir == scene then
-        scene.kbCues[#scene.kbCues+1] = self.kbCues[i]
       end
     end
     count = #self.mCues
@@ -119,6 +105,7 @@ local LnaDirector = class('LnaDirector', LnaActor)
 function LnaDirector:initialize()
   LnaActor.initialize(self)
   self.actors = {}
+  self._actorCues = {}
   self:setVisible(false)
 end
 
@@ -139,7 +126,7 @@ end
 function LnaDirector:_clearOutActorCues(cues)
   -- Clear cues of actors
   local count = #cues
-  local remakeCue = {}
+  local remakeCues = {}
   for i=1,count do
     if cues[i].dir ~= self then
       remakeCues[#remakeCues + 1] = cues[i]
@@ -162,7 +149,7 @@ function LnaDirector:_setScene(id, scene)
   self.scene = scene
   if scene then
     -- Clear actor cues, ready for re-add
-    self:_clearOutActorCues(self.cues)
+    self:_clearOutActorCues(self._actorCues)
     -- Cues from actors
     local count = #self.actors
     for i=1,count do
@@ -171,6 +158,7 @@ function LnaDirector:_setScene(id, scene)
     end
     -- Add cues to scene
     self:_addCues(self.cues, scene.cues)
+    self:_addCues(self._actorCues, scene.cues)
   end
 end
 
@@ -184,7 +172,6 @@ function LnaScene:initialize()
   self.actors = {}
   self._drawLayers = {}
   self.cues = {}
-  self.kbCues = {}
   self.mCues = {}
   self._mCueLayers = {}
   self.id = -1
@@ -255,26 +242,14 @@ function LnaScene:_addMouseOverCue(watch)
   self._mouseOverLayers = keys
 end
 
-function LnaScene:signalCue(eventName)
-  self:_signalCue(eventName, self)
+function LnaScene:signalCue(eventName, userData)
+  self:_signalCue(eventName, self, userData)
 end
 
-function LnaScene:signalKeyboardCue(key)
-  self:_signalKeyboardCue(key, self)
-end
-
-function LnaScene:_signalCue(eventName, obj)
+function LnaScene:_signalCue(eventName, obj, userData)
   for _,v in pairs(self.cues) do
     if v.cue == eventName and (not v.dir or (v.dir._active and v.dir == obj)) then
-      v.obj[v.cb](v.obj)
-    end
-  end
-end
-
-function LnaScene:_signalKeyboardCue(key, obj)
-  for _,v in pairs(self.kbCues) do
-    if v.key == key and (not v.dir or (v.dir._active and v.dir == obj)) then
-      v.obj[v.cb](v.obj)
+      v.obj[v.cb](v.obj, userData)
     end
   end
 end
@@ -367,15 +342,15 @@ function LnaStage:load()
   self.stageLoad = true
 end
 
-function LnaStage:signalKeyboardCue(key)
-  if self.scenes[self.sceneCurrentIdx] then
-    self.scenes[self.sceneCurrentIdx]:signalKeyboardCue(key)
-  end
-end
-
 function LnaStage:signalMouseCue(mousebutton, x , y, touch)
   if self.scenes[self.sceneCurrentIdx] then
     self.scenes[self.sceneCurrentIdx]:signalMouseCue(mousebutton, x, y, touch)
+  end
+end
+
+function LnaStage:signalCue(cueName, userData)
+  if self.scenes[self.sceneCurrentIdx] then
+    self.scenes[self.sceneCurrentIdx]:signalCue(cueName, userData)
   end
 end
 

@@ -10,6 +10,7 @@ local LnaActor = class('LnaActor')
 function LnaActor:initialize(drawLayer)
   self.cues = {}
   self.kbCues = {}
+  self.mCues = {}
   self.mouseOverCues = {}
   self.id = -1
   self.drawLayer = drawLayer or 0
@@ -41,10 +42,17 @@ function LnaActor:onKeyboardCue(keyName, callbackName, director)
   end
 end
 
+function LnaActor:onMouseCue(region, callbackName)
+  self.mCues[#self.mCues + 1] = {r=region, b=button, cb=callbackName, obj=self}
+  if self.scene then
+    self.scene:_addMouseCue({r=region, cb=callbackName, obj=self})
+  end
+end
+
 function LnaActor:onMouseOver(region, callbackName)
   self.mouseOverCues[#self.mouseOverCues + 1] = {r=region, cb=callbackName, obj=self}
   if self.scene then
-    self.scene._addMouseOverCue({r=region, cb=callbackName, obj=self})
+    self.scene:_addMouseOverCue({r=region, cb=callbackName, obj=self})
   end
 end
 
@@ -69,6 +77,10 @@ function LnaActor:_setScene(id, scene)
       if not self.kbCues[i].dir or self.kbCues[i].dir == scene then
         scene.kbCues[#scene.kbCues+1] = self.kbCues[i]
       end
+    end
+    count = #self.mCues
+    for i=1,count do
+      scene:_addMouseCue(self.mCues[i])
     end
     count = #self.mouseOverCues
     for i=1,count do
@@ -151,17 +163,14 @@ function LnaDirector:_setScene(id, scene)
   if scene then
     -- Clear actor cues, ready for re-add
     self:_clearOutActorCues(self.cues)
-    self:_clearOutActorCues(self.kbCues)
     -- Cues from actors
     local count = #self.actors
     for i=1,count do
       local childActor = self.actors[i]
       self:_addCues(childActor.cues, self.cues)
-      self:_addCues(childActor.kbCues, self.kbCues)
     end
     -- Add cues to scene
     self:_addCues(self.cues, scene.cues)
-    self:_addCues(self.kbCues, scene.kbCues)
   end
 end
 
@@ -176,6 +185,8 @@ function LnaScene:initialize()
   self._drawLayers = {}
   self.cues = {}
   self.kbCues = {}
+  self.mCues = {}
+  self._mCueLayers = {}
   self.id = -1
   self.stage = nil
   self.mouseOverCues = {}
@@ -214,6 +225,21 @@ function LnaScene:addDirector(director)
   self:addActor(director)
 end
 
+function LnaScene:_addMouseCue(watch)
+  if self.mCues[watch.obj.drawLayer] == nil then
+    self.mCues[watch.obj.drawLayer] = {}
+  end
+  local count = #self.mCues[watch.obj.drawLayer]
+  self.mCues[watch.obj.drawLayer][count + 1] = watch
+  -- Sort mouse watch layers
+  local keys = {}
+  for k,_ in pairs(self.mCues) do
+    keys[#keys+1] = k
+  end
+  table.sort(keys, function(a,b) return a > b end)
+  self._mCueLayers = keys
+end
+
 function LnaScene:_addMouseOverCue(watch)
   if self.mouseOverCues[watch.obj.drawLayer] == nil then
     self.mouseOverCues[watch.obj.drawLayer] = {}
@@ -233,6 +259,10 @@ function LnaScene:signalCue(eventName)
   self:_signalCue(eventName, self)
 end
 
+function LnaScene:signalKeyboardCue(key)
+  self:_signalKeyboardCue(key, self)
+end
+
 function LnaScene:_signalCue(eventName, obj)
   for _,v in pairs(self.cues) do
     if v.cue == eventName and (not v.dir or (v.dir._active and v.dir == obj)) then
@@ -241,10 +271,22 @@ function LnaScene:_signalCue(eventName, obj)
   end
 end
 
-function LnaScene:signalKeyboardCue(key)
+function LnaScene:_signalKeyboardCue(key, obj)
   for _,v in pairs(self.kbCues) do
     if v.key == key and (not v.dir or (v.dir._active and v.dir == obj)) then
       v.obj[v.cb](v.obj)
+    end
+  end
+end
+
+function LnaScene:signalMouseCue(button, x, y, touch)
+  for _,n in ipairs(self._mCueLayers) do
+    for _,m in pairs(self.mCues[n]) do
+      if m.r.x <= x and x <= (m.r.x + m.r.w) and m.r.y <= y and y <= (m.r.y + m.r.h) then
+        if m.obj[m.cb](m.obj, button, x, y, touch) then
+          return
+        end
+      end
     end
   end
 end
@@ -323,6 +365,18 @@ function LnaStage:load()
     self.scenes[self.sceneCurrentIdx]:load()
   end
   self.stageLoad = true
+end
+
+function LnaStage:signalKeyboardCue(key)
+  if self.scenes[self.sceneCurrentIdx] then
+    self.scenes[self.sceneCurrentIdx]:signalKeyboardCue(key)
+  end
+end
+
+function LnaStage:signalMouseCue(mousebutton, x , y, touch)
+  if self.scenes[self.sceneCurrentIdx] then
+    self.scenes[self.sceneCurrentIdx]:signalMouseCue(mousebutton, x, y, touch)
+  end
 end
 
 function LnaStage:update(dt)

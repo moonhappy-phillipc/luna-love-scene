@@ -10,9 +10,11 @@ local LnaActor = class('LnaActor')
 function LnaActor:initialize(drawLayer)
   self.cues = {}
   self.kbCues = {}
+  self.mouseOverCues = {}
   self.id = -1
   self.drawLayer = drawLayer or 0
   self.scene = nil
+  self.director = nil
   self._visible = true
   self._active = true
 end
@@ -39,6 +41,13 @@ function LnaActor:onKeyboardCue(keyName, callbackName, director)
   end
 end
 
+function LnaActor:onMouseOver(region, callbackName)
+  self.mouseOverCues[#self.mouseOverCues + 1] = {r=region, cb=callbackName, obj=self}
+  if self.scene then
+    self.scene._addMouseOverCue({r=region, cb=callbackName, obj=self})
+  end
+end
+
 function LnaActor:signalCue(cueName)
   if self.scene then
     self.scene:_signalCue(cueName, self)
@@ -60,6 +69,10 @@ function LnaActor:_setScene(id, scene)
       if not self.kbCues[i].dir or self.kbCues[i].dir == scene then
         scene.kbCues[#scene.kbCues+1] = self.kbCues[i]
       end
+    end
+    count = #self.mouseOverCues
+    for i=1,count do
+      scene:_addMouseOverCue(self.mouseOverCues[i])
     end
   end
 end
@@ -100,6 +113,7 @@ end
 function LnaDirector:addActor(actor)
   if actor then
     self.actors[#self.actors + 1] = actor
+    actor.director = self
     return #self.actors
   else
     return -1
@@ -164,6 +178,8 @@ function LnaScene:initialize()
   self.kbCues = {}
   self.id = -1
   self.stage = nil
+  self.mouseOverCues = {}
+  self._mouseOverLayers = {}
 end
 
 function LnaScene:_setAsCurrent()
@@ -198,12 +214,27 @@ function LnaScene:addDirector(director)
   self:addActor(director)
 end
 
+function LnaScene:_addMouseOverCue(watch)
+  if self.mouseOverCues[watch.obj.drawLayer] == nil then
+    self.mouseOverCues[watch.obj.drawLayer] = {}
+  end
+  local count = #self.mouseOverCues[watch.obj.drawLayer]
+  self.mouseOverCues[watch.obj.drawLayer][count + 1] = watch
+  -- Sort mouse watch layers
+  local keys = {}
+  for k,_ in pairs(self.mouseOverCues) do
+    keys[#keys+1] = k
+  end
+  table.sort(keys, function(a,b) return a > b end)
+  self._mouseOverLayers = keys
+end
+
 function LnaScene:signalCue(eventName)
   self:_signalCue(eventName, self)
 end
 
 function LnaScene:_signalCue(eventName, obj)
-  for i,v in pairs(self.cues) do
+  for _,v in pairs(self.cues) do
     if v.cue == eventName and (not v.dir or (v.dir._active and v.dir == obj)) then
       v.obj[v.cb](v.obj)
     end
@@ -211,7 +242,7 @@ function LnaScene:_signalCue(eventName, obj)
 end
 
 function LnaScene:signalKeyboardCue(key)
-  for i,v in pairs(self.kbCues) do
+  for _,v in pairs(self.kbCues) do
     if v.key == key and (not v.dir or (v.dir._active and v.dir == obj)) then
       v.obj[v.cb](v.obj)
     end
@@ -226,8 +257,24 @@ function LnaScene:load()
   end
 end
 
+function LnaScene:_mouseOverUpdate(dt)
+  -- Mouse over
+  local mx, my = love.mouse.getPosition()
+  for _,n in ipairs(self._mouseOverLayers) do
+    for _,m in pairs(self.mouseOverCues[n]) do
+      if m.r.x <= mx and mx <= (m.r.x + m.r.w) and m.r.y <= my and my <= (m.r.y + m.r.h) then
+        if m.obj[m.cb](m.obj, dt, mx, my) then
+          return
+        end
+      end
+    end
+  end
+end
+
 function LnaScene:update(dt)
-  for i,v in pairs(self.actors) do
+  self:_mouseOverUpdate(dt)
+  -- Actor updates
+  for _,v in pairs(self.actors) do
     for _,a in pairs(v) do
       a:_doupdate(dt)
     end

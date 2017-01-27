@@ -47,6 +47,7 @@ end
 function LnaActor:_setScene(id, scene)
   self.id = id
   self.scene = scene
+  local count = 0
   if scene then
     count = #self.cues
     for i=1,count do
@@ -66,7 +67,7 @@ end
 function LnaActor:load()
 end
 
-function LnaActor:update(dt)
+function LnaActor:update()
 end
 
 function LnaActor:draw()
@@ -112,7 +113,7 @@ end
 function LnaDirector:_clearOutActorCues(cues)
   -- Clear cues of actors
   local count = #cues
-  local remakeCue = {}
+  local remakeCues = {}
   for i=1,count do
     if cues[i].dir ~= self then
       remakeCues[#remakeCues + 1] = cues[i]
@@ -166,8 +167,8 @@ end
 
 function LnaScene:_setAsCurrent()
   -- Clear cues
-  count = #self.cues
-  for i=0, count do self.cues[i]=nil end
+  local count = #self.cues
+  for i=0,count do self.cues[i]=nil end
   self.cues = {}
   -- Configure all actors
   for i,v in pairs(self.actors) do
@@ -189,7 +190,7 @@ function LnaScene:signalCue(eventName)
 end
 
 function LnaScene:_signalCue(eventName, obj)
-  for i,v in pairs(self.cues) do
+  for _,v in pairs(self.cues) do
     if v.cue == eventName and (not v.dir or (v.dir._active and v.dir == obj)) then
       v.obj[v.cb](v.obj)
     end
@@ -197,7 +198,7 @@ function LnaScene:_signalCue(eventName, obj)
 end
 
 function LnaScene:signalKeyboardCue(key)
-  for i,v in pairs(self.kbCues) do
+  for _,v in pairs(self.kbCues) do
     if v.key == key and (not v.dir or v.dir._active) then
       v.obj[v.cb](v.obj)
     end
@@ -205,19 +206,19 @@ function LnaScene:signalKeyboardCue(key)
 end
 
 function LnaScene:load()
-  for i,v in pairs(self.actors) do
+  for _,v in pairs(self.actors) do
     v:load()
   end
 end
 
 function LnaScene:update(dt)
-  for i,v in pairs(self.actors) do
+  for _,v in pairs(self.actors) do
     v:_doupdate(dt)
   end
 end
 
 function LnaScene:draw()
-  for i,v in pairs(self.actors) do
+  for _,v in pairs(self.actors) do
     v:_dodraw()
   end
 end

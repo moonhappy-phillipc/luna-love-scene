@@ -63,21 +63,22 @@ function HiWorldDirector:update(dt)
   end
 end
 
--- Construct the scene
-local scene = Lna.Scene:new()
-local director = HiWorldDirector:new()
-scene:addActor(HiWorld:new()) -- note this actor is not managed by a director and will perform on global cues
-scene:addActor(ObidientActor:new(director))
--- director:addActor(obidientActor) -- uncomment to see director cue handled
-scene:addDirector(director)
-local stage = Lna.Stage:new()
-local sceneIdx = stage:addScene(scene)
-stage:setCurrentScene(sceneIdx)
 
+local stage = Lna.Stage:new()
 
 -- Love2D calls
 function love.load(arg)
   if arg[#arg] == "-debug" then require("mobdebug").start() end
+  -- Construct the scene
+  local scene = Lna.Scene:new()
+  local director = HiWorldDirector:new()
+  scene:addActor(HiWorld:new()) -- note this actor is not managed by a director and will perform on global cues
+  local obidientActor = ObidientActor:new(director)
+  -- director:addActor(obidientActor) -- uncomment to see director cue handled
+  scene:addActor(obidientActor)
+  scene:addDirector(director)
+  local sceneIdx = stage:addScene(scene)
+  stage:setCurrentScene(sceneIdx)
   stage:load()
 end
 

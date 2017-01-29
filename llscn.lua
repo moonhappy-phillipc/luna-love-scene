@@ -124,24 +124,10 @@ function LnaDirector:addDirector(director)
   return self:addActor(director)
 end
 
-function LnaDirector:_clearOutActorCues(cues)
-  -- Clear cues of actors
-  local count = #cues
-  local remakeCues = {}
+function LnaDirector:_addCues(fromCues, toCues)
+  local count = #fromCues
   for i=1,count do
-    if cues[i].dir ~= self then
-      remakeCues[#remakeCues + 1] = cues[i]
-    end
-    cues[i] = nil
-  end
-  cues = {}
-  cues = remakeCues
-end
-
-function LnaDirector:_addCues(actorCues, toCues)
-  local count = #actorCues
-  for i=1,count do
-    toCues[#toCues+1] = actorCues[i]
+    toCues[#toCues+1] = fromCues[i]
   end
 end
 
@@ -150,7 +136,11 @@ function LnaDirector:_setScene(id, scene)
   self.scene = scene
   if scene then
     -- Clear actor cues, ready for re-add
-    self:_clearOutActorCues(self._actorCues)
+    if self._actorCues ~= nil then
+      local count = #self._actorCues
+      for i=0,count do self._actorCues[i]=nil end
+    end
+    self._actorCues = {}
     -- Cues from actors
     scene:_clearDirectorActors(self)
     local count = #self.actors

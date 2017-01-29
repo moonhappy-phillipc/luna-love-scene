@@ -152,10 +152,12 @@ function LnaDirector:_setScene(id, scene)
     -- Clear actor cues, ready for re-add
     self:_clearOutActorCues(self._actorCues)
     -- Cues from actors
+    scene:_clearDirectorActors(self)
     local count = #self.actors
     for i=1,count do
       local childActor = self.actors[i]
       self:_addCues(childActor.cues, self.cues)
+      scene:addActor(childActor)
     end
     -- Add cues to scene
     self:_addCues(self.cues, scene.cues)
@@ -184,12 +186,23 @@ end
 function LnaScene:_setAsCurrent()
   -- Clear cues
   local count = #self.cues
-  for i=0,count do self.cues[i]=nil end
+  for i=1,count do self.cues[i]=nil end
   self.cues = {}
   -- Configure all actors
   for _,v in pairs(self.actors) do
     for k,a in pairs(v) do
       a:_setScene(k, self)
+    end
+  end
+end
+
+function LnaScene:_clearDirectorActors(director)
+  local count = #self.actors
+  for _,v in pairs(self.actors) do
+    for k,a in pairs(v) do
+      if a.director == director then
+        v[k] = nil
+      end
     end
   end
 end
